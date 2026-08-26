@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serene Space — Calm & Grounding</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b, #311042);
+      --card-bg: rgba(255, 255, 255, 0.07);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text-main: #f8fafc;
+      --accent: #818cf8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: auto;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      max-width: 800px;
+      width: 90%;
+      margin: 2rem auto;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .interactive { pointer-events: auto; }
+
+    header h1 {
+      font-weight: 300;
+      font-size: 2.5rem;
+      letter-spacing: 2px;
+      margin-bottom: 0.5rem;
+    }
+    header p { opacity: 0.8; font-weight: 300; margin-bottom: 2rem; }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    /* Breathing Circle */
+    .breath-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+    .circle-outer {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .circle-inner {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #a5b4fc, #6366f1);
+      box-shadow: 0 0 30px rgba(165, 180, 252, 0.5);
+      transition: transform 4s ease-in-out;
+    }
+    .breath-text {
+      margin-top: 1.5rem;
+      font-size: 1.25rem;
+      letter-spacing: 1px;
+      font-weight: 300;
+    }
+
+    /* Controls */
+    button {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.75rem 1.75rem;
+      border-radius: 999px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+
+    .affirmation {
+      font-style: italic;
+      font-size: 1.1rem;
+      opacity: 0.9;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="particleCanvas"></canvas>
+
+  <div class="container">
+    <header>
+      <h1>SERENE SPACE</h1>
+      <p>Take a quiet pause. Move your cursor gently across the screen.</p>
+    </header>
+
+    <div class="card interactive">
+      <div class="breath-container">
+        <div class="circle-outer">
+          <div class="circle-inner" id="breathCircle"></div>
+        </div>
+        <div class="breath-text" id="breathInstruction">Click Start to Begin Breathing</div>
+      </div>
+      <button id="breathBtn" onclick="toggleBreathing()">Start Box Breathing</button>
+    </div>
+
+    <div class="card interactive">
+      <p class="affirmation" id="affirmationText">"You don't have to control your thoughts. You just have to stop letting them control you."</p>
+      <button style="margin-top: 1rem;" onclick="nextAffirmation()">New Gentle Thought</button>
+    </div>
+  </div>
+
+  <script>
+    /* --- Interactive Particle Canvas --- */
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.random() * 8 + 2;
+        this.speedX = (Math.random() - 0.5) * 1.5;
+        this.speedY = (Math.random() - 0.5) * 1.5;
+        this.alpha = 1;
+        this.color = `hsla(${230 + Math.random() * 40}, 80%, 75%, `;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.alpha -= 0.008;
+      }
+      draw() {
+        ctx.fillStyle = this.color + this.alpha + ')';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function addParticles(e) {
+      for (let i = 0; i < 3; i++) {
+        particles.push(new Particle(e.clientX, e.clientY));
+      }
+    }
+    window.addEventListener('mousemove', addParticles);
+    window.addEventListener('touchmove', (e) => addParticles(e.touches[0]));
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p, index) => {
+        p.update();
+        p.draw();
+        if (p.alpha <= 0) particles.splice(index, 1);
+      });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    /* --- Box Breathing Logic --- */
+    let breathingInterval = null;
+    let isBreathing = false;
+    const circle = document.getElementById('breathCircle');
+    const instruction = document.getElementById('breathInstruction');
+    const breathBtn = document.getElementById('breathBtn');
+
+    const phases = [
+      { text: "Inhale slowly...", scale: 2 },
+      { text: "Hold breath...", scale: 2 },
+      { text: "Exhale fully...", scale: 1 },
+      { text: "Rest...", scale: 1 }
+    ];
+
+    function toggleBreathing() {
+      if (isBreathing) {
+        clearInterval(breathingInterval);
+        isBreathing = false;
+        circle.style.transform = "scale(1)";
+        instruction.innerText = "Click Start to Begin Breathing";
+        breathBtn.innerText = "Start Box Breathing";
+        return;
+      }
+
+      isBreathing = true;
+      breathBtn.innerText = "Stop Session";
+      let phaseIndex = 0;
+
+      function runCycle() {
+        const current = phases[phaseIndex];
+        instruction.innerText = current.text;
+        circle.style.transform = `scale(${current.scale})`;
+        phaseIndex = (phaseIndex + 1) % phases.length;
+      }
+
+      runCycle();
+      breathingInterval = setInterval(runCycle, 4000);
+    }
+
+    /* --- Affirmation Deck --- */
+    const quotes = [
+      "You are allowed to take this one moment at a time.",
+      "Your current situation is not your final destination.",
+      "Be gentle with yourself. You are doing the best you can.",
+      "Breathe. You have survived all of your hardest days so far.",
+      "Rest is not earned—it is necessary."
+    ];
+    function nextAffirmation() {
+      const el = document.getElementById('affirmationText');
+      const random = quotes[Math.floor(Math.random() * quotes.length)];
+      el.style.opacity = 0;
+      setTimeout(() => {
+        el.innerText = `"${random}"`;
+        el.style.opacity = 0.9;
+      }, 300);
+    }
+  </script>
+</body>
+</html>
