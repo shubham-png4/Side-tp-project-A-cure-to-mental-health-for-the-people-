@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Chess vs AI Engine</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel-bg: #1e293b;
+      --light-sq: #f0d9b5;
+      --dark-sq: #b58863;
+      --highlight: rgba(105, 185, 120, 0.7);
+      --selected: rgba(246, 235, 97, 0.85);
+      --text: #f8fafc;
+      --board-size: 560px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    h1 { margin-bottom: 0.5rem; font-weight: 500; font-size: 2rem; letter-spacing: 0.5px; }
+    .status { margin-bottom: 1.5rem; font-size: 1.15rem; color: #94a3b8; font-weight: 400; }
+    
+    .game-container {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-start;
+    }
+
+    /* Board Container with Labels */
+    .board-wrapper {
+      position: relative;
+      padding: 24px;
+      background: #1e293b;
+      border-radius: 8px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+    #board {
+      width: var(--board-size);
+      height: var(--board-size);
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      border: 2px solid #334155;
+      position: relative;
+    }
+
+    /* Board Axis Labels */
+    .files-label, .ranks-label {
+      position: absolute;
+      display: flex;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .files-label {
+      bottom: 4px;
+      left: 24px;
+      width: var(--board-size);
+      justify-content: space-around;
+    }
+    .ranks-label {
+      top: 24px;
+      left: 6px;
+      height: var(--board-size);
+      flex-direction: column;
+      justify-content: space-around;
+    }
+
+    .square {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .light { background-color: var(--light-sq); }
+    .dark { background-color: var(--dark-sq); }
+    .selected { background-color: var(--selected) !important; }
+
+    /* Crisp SVG Piece Rendering */
+    .piece {
+      width: 85%;
+      height: 85%;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* SVG Piece Styles */
+    .piece.wP { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03C15.41 26.96 14 29.8 14 33h17c0-3.2-1.41-6.04-4.41-6.97C28.06 24.84 29 23.03 29 21c0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="%23ffffff" stroke="%23000000" stroke-width="1.5" stroke-linecap="round"/></svg>'); }
+    .piece.wR { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%23ffffff" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14h23l-2 18H13l-2-18zM9 10h4v4H9v-4zM14 10h4v4h-4v-4zM19 10h7v4h-7v-4zM27 10h4v4h-4v-4zM32 10h4v4h-4v-4z"/><path d="M12 14h21v3H12v-3z"/></g></svg>'); }
+    .piece.wN { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18 C 21.5,14.5 16,14 12,16 C 14,11 18,10 22,10 z" fill="%23ffffff" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="16" r="1.5" fill="%23000000"/></svg>'); }
+    .piece.wB { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%23ffffff" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36h27v-2H9v2zM15 32h15v-2H15v2zM22.5 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17.5 26h10c.5-4 2.5-7 5-11-2.5-3-6-4.5-10-4.5s-7.5 1.5-10 4.5c2.5 4 4.5 7 5 11z"/><path d="M20 18h5M22.5 15.5v5"/></g></svg>'); }
+    .piece.wQ { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%23ffffff" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 26c1.5 2 2.5 4 1 6.5 2.5 1 5 1.5 7.5.5 1.5 3 2.5 3 5 0 2.5 1 5 .5 7.5-.5-1.5-2.5-.5-4.5 1-6.5L38 14l-7 3-3.5-7-5 7-5-7-3.5 7-7-3 5 12z"/><path d="M9 39h27v-3H9v3z"/></g></svg>'); }
+    .piece.wK { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%23ffffff" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5M22.5 25c-4 0-7-2.5-7-7 0-4 3-7 7-7s7 3 7 7c0 4.5-3 7-7 7z"/><path d="M11.5 37h22v-3h-22v3zM14.5 32h16v-2h-16v2zM12 28h21v-3H12v3z"/></g></svg>'); }
+
+    .piece.bP { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03C15.41 26.96 14 29.8 14 33h17c0-3.2-1.41-6.04-4.41-6.97C28.06 24.84 29 23.03 29 21c0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="%232d3748" stroke="%23000000" stroke-width="1.5" stroke-linecap="round"/></svg>'); }
+    .piece.bR { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%232d3748" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14h23l-2 18H13l-2-18zM9 10h4v4H9v-4zM14 10h4v4h-4v-4zM19 10h7v4h-7v-4zM27 10h4v4h-4v-4zM32 10h4v4h-4v-4z"/><path d="M12 14h21v3H12v-3z"/></g></svg>'); }
+    .piece.bN { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18 C 21.5,14.5 16,14 12,16 C 14,11 18,10 22,10 z" fill="%232d3748" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="16" r="1.5" fill="%23ffffff"/></svg>'); }
+    .piece.bB { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%232d3748" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 36h27v-2H9v2zM15 32h15v-2H15v2zM22.5 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM17.5 26h10c.5-4 2.5-7 5-11-2.5-3-6-4.5-10-4.5s-7.5 1.5-10 4.5c2.5 4 4.5 7 5 11z"/><path d="M20 18h5M22.5 15.5v5"/></g></svg>'); }
+    .piece.bQ { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%232d3748" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 26c1.5 2 2.5 4 1 6.5 2.5 1 5 1.5 7.5.5 1.5 3 2.5 3 5 0 2.5 1 5 .5 7.5-.5-1.5-2.5-.5-4.5 1-6.5L38 14l-7 3-3.5-7-5 7-5-7-3.5 7-7-3 5 12z"/><path d="M9 39h27v-3H9v3z"/></g></svg>'); }
+    .piece.bK { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><g fill="%232d3748" stroke="%23000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5M22.5 25c-4 0-7-2.5-7-7 0-4 3-7 7-7s7 3 7 7c0 4.5-3 7-7 7z"/><path d="M11.5 37h22v-3h-22v3zM14.5 32h16v-2h-16v2zM12 28h21v-3H12v3z"/></g></svg>'); }
+
+    .valid-move::after {
+      content: '';
+      width: 20px;
+      height: 20px;
+      background-color: var(--highlight);
+      border-radius: 50%;
+      position: absolute;
+      z-index: 3;
+    }
+
+    /* Sidebar Controls & History */
+    .sidebar {
+      background: var(--panel-bg);
+      padding: 1.5rem;
+      border-radius: 8px;
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+    }
+    .history-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      height: 320px;
+      overflow-y: auto;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }
+    .move-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .move-num { color: #64748b; }
+    
+    button {
+      background: #3b82f6;
+      border: none;
+      color: white;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #2563eb; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+</head>
+<body>
+
+  <h1>Chess Engine</h1>
+  <div class="status" id="status">Your turn (White)</div>
+
+  <div class="game-container">
+    <div class="board-wrapper">
+      <div class="ranks-label">
+        <span>8</span><span>7</span><span>6</span><span>5</span>
+        <span>4</span><span>3</span><span>2</span><span>1</span>
+      </div>
+      
+      <div id="board"></div>
+
+      <div class="files-label">
+        <span>a</span><span>b</span><span>c</span><span>d</span>
+        <span>e</span><span>f</span><span>g</span><span>h</span>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <button onclick="resetGame()">New Game</button>
+      <div class="history-box" id="history"></div>
+    </div>
+  </div>
+
+  <script>
+    const boardElement = document.getElementById('board');
+    const statusElement = document.getElementById('status');
+    const historyElement = document.getElementById('history');
+    let game = new Chess();
+    let selectedSquare = null;
+    let possibleMoves = [];
+
+    // Piece-Square Positional Values for Minimax Evaluation
+    const pawnEval = [
+      [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+      [5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0,  5.0],
+      [1.0,  1.0,  2.0,  3.0,  3.0,  2.0,  1.0,  1.0],
+      [0.5,  0.5,  1.0,  2.5,  2.5,  1.0,  0.5,  0.5],
+      [0.0,  0.0,  0.0,  2.0,  2.0,  0.0,  0.0,  0.0],
+      [0.5, -0.5, -1.0,  0.0,  0.0, -1.0, -0.5,  0.5],
+      [0.5,  1.0,  1.0, -2.0, -2.0,  1.0,  1.0,  0.5],
+      [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0]
+    ];
+    const knightEval = [
+      [-5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0],
+      [-4.0, -2.0,  0.0,  0.0,  0.0,  0.0, -2.0, -4.0],
+      [-3.0,  0.0,  1.0,  1.5,  1.5,  1.0,  0.0, -3.0],
+      [-3.0,  0.5,  1.5,  2.0,  2.0,  1.5,  0.5, -3.0],
+      [-3.0,  0.0,  1.5,  2.0,  2.0,  1.5,  0.0, -3.0],
+      [-3.0,  0.5,  1.0,  1.5,  1.5,  1.0,  0.5, -3.0],
+      [-4.0, -2.0,  0.0,  0.5,  0.5,  0.0, -2.0, -4.0],
+      [-5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0]
+    ];
+    const bishopEval = [
+      [-2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0],
+      [-1.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -1.0],
+      [-1.0,  0.0,  0.5,  1.0,  1.0,  0.5,  0.0, -1.0],
+      [-1.0,  0.5,  0.5,  1.0,  1.0,  0.5,  0.5, -1.0],
+      [-1.0,  0.0,  1.0,  1.0,  1.0,  1.0,  0.0, -1.0],
+      [-1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0, -1.0],
+      [-1.0,  0.5,  0.0,  0.0,  0.0,  0.0,  0.5, -1.0],
+      [-2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0]
+    ];
+    const rookEval = [
+      [ 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+      [ 0.5,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  0.5],
+      [-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5],
+      [-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5],
+      [-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5],
+      [-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5],
+      [-0.5,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.5],
+      [ 0.0,  0.0,  0.0,  0.5,  0.5,  0.0,  0.0,  0.0]
+    ];
+    const evalQueen = [
+      [-2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0],
+      [-1.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -1.0],
+      [-1.0,  0.0,  0.5,  0.5,  0.5,  0.5,  0.0, -1.0],
+      [-0.5,  0.0,  0.5,  0.5,  0.5,  0.5,  0.0, -0.5],
+      [ 0.0,  0.0,  0.5,  0.5,  0.5,  0.5,  0.0, -0.5],
+      [-1.0,  0.5,  0.5,  0.5,  0.5,  0.5,  0.0, -1.0],
+      [-1.0,  0.0,  0.5,  0.0,  0.0,  0.0,  0.0, -1.0],
+      [-2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0]
+    ];
+
+    function createBoard() {
+      boardElement.innerHTML = '';
+      const boardState = game.board();
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const square = document.createElement('div');
+          const squareName = String.fromCharCode(97 + c) + (8 - r);
+          
+          square.classList.add('square');
+          square.classList.add((r + c) % 2 === 0 ? 'light' : 'dark');
+          square.dataset.square = squareName;
+
+          if (selectedSquare === squareName) {
+            square.classList.add('selected');
+          }
+          if (possibleMoves.includes(squareName)) {
+            square.classList.add('valid-move');
+          }
+
+          const piece = boardState[r][c];
+          if (piece) {
+            const pieceDiv = document.createElement('div');
+            const classPieceName = piece.color + piece.type.toUpperCase();
+            pieceDiv.classList.add('piece', classPieceName);
+            square.appendChild(pieceDiv);
+          }
+
+          square.addEventListener('click', () => handleSquareClick(squareName));
+          boardElement.appendChild(square);
+        }
+      }
+      updateHistory();
+    }
+
+    function handleSquareClick(square) {
+      if (game.game_over() || game.turn() === 'b') return;
+
+      if (selectedSquare === square) {
+        selectedSquare = null;
+        possibleMoves = [];
+      } else if (selectedSquare && possibleMoves.includes(square)) {
+        game.move({ from: selectedSquare, to: square, promotion: 'q' });
+        selectedSquare = null;
+        possibleMoves = [];
+        createBoard();
+        updateStatus();
+
+        if (!game.game_over()) {
+          setTimeout(makeAIMove, 250);
+        }
+        return;
+      } else {
+        const piece = game.get(square);
+        if (piece && piece.color === 'w') {
+          selectedSquare = square;
+          const moves = game.moves({ square: square, verbose: true });
+          possibleMoves = moves.map(m => m.to);
+        } else {
+          selectedSquare = null;
+          possibleMoves = [];
+        }
+      }
+      createBoard();
+    }
+
+    function makeAIMove() {
+      statusElement.innerText = "AI is thinking...";
+      setTimeout(() => {
+        const bestMove = getBestMove(game, 3);
+        game.move(bestMove);
+        createBoard();
+        updateStatus();
+      }, 50);
+    }
+
+    function getBestMove(game, depth) {
+      let bestMove = null;
+      let bestValue = -9999;
+      let alpha = -10000;
+      let beta = 10000;
+      const moves = game.moves({ verbose: true });
+
+      for (let i = 0; i < moves.length; i++) {
+        const move = moves[i];
+        game.move(move);
+        let value = minimax(game, depth - 1, alpha, beta, false);
+        game.undo();
+        if (value > bestValue) {
+          bestValue = value;
+          bestMove = move;
+        }
+      }
+      return bestMove || moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    function minimax(game, depth, alpha, beta, isMaximizing) {
+      if (depth === 0 || game.game_over()) {
+        return -evaluateBoard(game.board());
+      }
+
+      const moves = game.moves();
+      if (isMaximizing) {
+        let maxEval = -9999;
+        for (let i = 0; i < moves.length; i++) {
+          game.move(moves[i]);
+          let evalVal = minimax(game, depth - 1, alpha, beta, false);
+          game.undo();
+          maxEval = Math.max(maxEval, evalVal);
+          alpha = Math.max(alpha, evalVal);
+          if (beta <= alpha) break;
+        }
+        return maxEval;
+      } else {
+        let minEval = 9999;
+        for (let i = 0; i < moves.length; i++) {
+          game.move(moves[i]);
+          let evalVal = minimax(game, depth - 1, alpha, beta, true);
+          game.undo();
+          minEval = Math.min(minEval, evalVal);
+          beta = Math.min(beta, evalVal);
+          if (beta <= alpha) break;
+        }
+        return minEval;
+      }
+    }
+
+    function evaluateBoard(board) {
+      let totalEval = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          totalEval += getPieceValue(board[r][c], r, c);
+        }
+      }
+      return totalEval;
+    }
+
+    function getPieceValue(piece, r, c) {
+      if (piece === null) return 0;
+      
+      const getAbsoluteValue = (p, r, c) => {
+        if (p.type === 'p') return 10 + pawnEval[r][c];
+        if (p.type === 'r') return 50 + rookEval[r][c];
+        if (p.type === 'n') return 30 + knightEval[r][c];
+        if (p.type === 'b') return 30 + bishopEval[r][c];
+        if (p.type === 'q') return 90 + evalQueen[r][c];
+        if (p.type === 'k') return 900;
+        return 0;
+      };
+
+      let val = getAbsoluteValue(piece, piece.color === 'b' ? r : 7 - r, c);
+      return piece.color === 'b' ? val : -val;
+    }
+
+    function updateStatus() {
+      if (game.in_checkmate()) {
+        statusElement.innerText = game.turn() === 'w' ? "Checkmate! Black wins." : "Checkmate! You win!";
+      } else if (game.in_draw()) {
+        statusElement.innerText = "Game over: Draw!";
+      } else {
+        statusElement.innerText = game.turn() === 'w' ? "Your turn (White)" : "AI is thinking...";
+      }
+    }
+
+    function updateHistory() {
+      const history = game.history();
+      let html = '';
+      for (let i = 0; i < history.length; i += 2) {
+        const moveNum = (i / 2) + 1;
+        const whiteMove = history[i] || '';
+        const blackMove = history[i + 1] || '';
+        html += `<div class="move-row"><span class="move-num">${moveNum}.</span> <span>${whiteMove}</span> <span>${blackMove}</span></div>`;
+      }
+      historyElement.innerHTML = html;
+      historyElement.scrollTop = historyElement.scrollHeight;
+    }
+
+    function resetGame() {
+      game.reset();
+      selectedSquare = null;
+      possibleMoves = [];
+      createBoard();
+      updateStatus();
+    }
+
+    createBoard();
+  </script>
+</body>
+</html>
