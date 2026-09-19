@@ -1,0 +1,1 @@
+curl -I https://example.com
