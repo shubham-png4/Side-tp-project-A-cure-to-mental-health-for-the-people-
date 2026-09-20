@@ -1,0 +1,5 @@
+# Filter to inspect HTTP POST requests carrying form data
+http.request.method == "POST" && http.content_type contains "form"
+
+# Filter to identify HTTP Basic Authentication headers
+http.authorization contains "Basic"

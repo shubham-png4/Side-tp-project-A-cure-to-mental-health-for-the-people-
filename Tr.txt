@@ -1,0 +1,13 @@
+<VirtualHost *:443>
+    ServerName example.com
+    ServerAlias www.example.com
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/example.com/cert.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/example.com/privkey.pem
+
+    # Configure HSTS Header (1 year max-age)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+    # Rest of your virtual host configuration...
+</VirtualHost>

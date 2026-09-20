@@ -1,0 +1,12 @@
+server {
+    listen 443 ssl http2;
+    server_name example.com www.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+    # Configure HSTS Header (1 year max-age)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
+    # Rest of your server configuration...
+}
