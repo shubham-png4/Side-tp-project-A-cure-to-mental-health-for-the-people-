@@ -1,0 +1,1 @@
+sudo python3 net_toolkit.py mac -i eth0 -m 00:11:22:33:44:55

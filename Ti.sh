@@ -1,0 +1,1 @@
+sudo python3 net_toolkit.py scan -t 192.168.1.1/24
